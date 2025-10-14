@@ -21,7 +21,10 @@
 (provide (all-defined-out))
 
 (require typed/racket/draw
-         racket/fixnum)
+         racket/fixnum
+         racket/file)
+(require/typed racket/draw
+  [register-font-file (-> Path-String Void)])
 (require "global.rkt"
          "util.rkt"
          "colors.rkt"
@@ -39,6 +42,19 @@
          "pattern.rkt"
          "chart.rkt"
          "chart-row.rkt")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Ensure Stitchmastery Dash font is available for bitmap rendering.
+(define stitchmastery-font-name : String "StitchMastery Dash")
+(define stitchmastery-font-path
+  (build-path resources-path "font" "StitchMasteryDash.ttf"))
+
+(with-handlers ([exn:fail?
+                 (λ ([e : exn:fail?])
+                   (wlog (format "Failed to load StitchMastery font: ~a" (exn-message e))))])
+  (when (file-exists? stitchmastery-font-path)
+    (register-font-file stitchmastery-font-path)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -307,7 +323,15 @@
     (max 10
          (inexact->exact
           (round (* (real->double-flonum cell-size) 0.6)))))
-  (make-object font% font-size 'modern))
+  (make-object font%
+               font-size
+               stitchmastery-font-name
+               'modern
+               'normal
+               'normal
+               #f
+               'aligned
+               'aligned))
 
 (: hex->brush : Nonnegative-Fixnum -> (Instance Brush%))
 (define (hex->brush color)
