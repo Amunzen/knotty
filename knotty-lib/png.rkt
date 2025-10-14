@@ -296,9 +296,9 @@
           (fixnum->byte (fxand (fxrshift c 8) #xFF))
           (fixnum->byte (fxand c #xFF))))
 
-(: draw-strikethrough : (Instance DC<%>) Real Real Real Real -> Void)
-(define (draw-strikethrough dc x y w h)
-  (send dc set-pen "red" 2 'solid)
+(: draw-strikethrough : (Instance DC<%>) Real Real Real Real (Instance Pen%) -> Void)
+(define (draw-strikethrough dc x y w h strike-pen)
+  (send dc set-pen strike-pen)
   (send dc draw-line x (+ y (/ h 2.0)) (+ x w) (+ y (/ h 2.0))))
 
 (: make-font-for-cell : Positive-Integer -> (Instance Font%))
@@ -308,6 +308,11 @@
          (inexact->exact
           (round (* (real->double-flonum cell-size) 0.6)))))
   (make-object font% font-size 'modern))
+
+(: hex->brush : Nonnegative-Fixnum -> (Instance Brush%))
+(define (hex->brush color)
+  (let-values ([(r g b) (color-components color)])
+    (make-object brush% (make-object color% r g b) 'solid)))
 
 (: pattern->bitmap (->* (Pattern)
                         (Positive-Integer Positive-Integer Positive-Integer Nonnegative-Integer)
@@ -332,14 +337,13 @@
   (define yarns (Chart-yarns chart))
   (define symbol-font (make-font-for-cell cell-size))
   (define border-pen (make-object pen% "black" 1 'solid))
-  (define cache-brushes : (HashTable String (Instance Brush%)) (make-hasheq))
-  (: brush-for : String -> (Instance Brush%))
+  (define strike-pen (make-object pen% "red" 2 'solid))
+  (define cache-brushes : (HashTable Nonnegative-Fixnum (Instance Brush%)) (make-hasheq))
+  (: brush-for : Nonnegative-Fixnum -> (Instance Brush%))
   (define (brush-for color)
-    (if (hash-has-key? cache-brushes color)
-        (hash-ref cache-brushes color)
-        (let ([b (make-object brush% color 'solid)])
-          (hash-set! cache-brushes color b)
-          b)))
+    (hash-ref! cache-brushes
+               color
+               (λ () (hex->brush color))))
   (: resolve-yarn-color : Stitch Chart-row -> Nonnegative-Fixnum)
   (define (resolve-yarn-color st row)
     (let* ([y (Stitch-yarn st)]
@@ -357,15 +361,16 @@
     (define stitches : (Vectorof Stitch) (Chart-row-stitches row))
     (define rs? (Chart-row-rs? row))
     (define row-symbols (vector-length stitches))
-    (: draw-cell : Integer String String String Boolean Boolean -> Void)
-    (define (draw-cell column color-str text text-color blank? nostitch?)
+    (: draw-cell : Integer Nonnegative-Fixnum String String Boolean Boolean -> Void)
+    (define (draw-cell column color-val text text-color blank? nostitch?)
       (define base-x (+ margin (* column cell-size)))
-      (send dc set-brush (brush-for color-str))
+      (send dc set-brush (brush-for color-val))
       (send dc set-pen border-pen)
       (send dc draw-rectangle base-x base-y cell-size cell-size)
       (cond
         [blank?
-         (draw-strikethrough dc base-x base-y cell-size cell-size)]
+         (draw-strikethrough dc base-x base-y cell-size cell-size strike-pen)
+         (send dc set-pen border-pen)]
         [nostitch?
          (void)]
         [else
@@ -379,7 +384,7 @@
              (send dc draw-text text tx ty)))]))
     ;; leading blanks (no stitch)
     (for ([c (in-range align-left)])
-      (draw-cell c "#EEEEEE" "" "#888888" #f #t))
+      (draw-cell c #xEEEEEE "" "#888888" #f #t))
     ;; actual stitches
     (for ([i (in-range row-symbols)])
       (define st : Stitch (vector-ref stitches i))
@@ -391,7 +396,6 @@
           [nostitch? #xEEEEEE]
           [blank? #xFFFFFF]
           [else (resolve-yarn-color st row)]))
-      (define background (format "#~a" (hex-color color)))
       (define text-bytes
         (let ([st-type (get-stitchtype sym)])
           (cond
@@ -404,10 +408,10 @@
       (define text-color
         (if (or nostitch? blank?) "#000000"
             (contrast-color-hex (hex-color color))))
-      (draw-cell (+ align-left i) background text text-color blank? nostitch?))
+      (draw-cell (+ align-left i) color text text-color blank? nostitch?))
     ;; trailing blanks (no stitch)
     (for ([c (in-range align-right)])
-      (draw-cell (+ align-left row-symbols c) "#EEEEEE" "" "#888888" #f #t)))
+      (draw-cell (+ align-left row-symbols c) #xEEEEEE "" "#888888" #f #t)))
   (send dc set-bitmap #f)
   bmp)
 

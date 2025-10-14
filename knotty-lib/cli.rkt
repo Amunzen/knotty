@@ -71,6 +71,7 @@
            [import-xml?      (equal? '((import-xml? #t))      ((sxpath "/import-xml?")      flags~))]
            ;[export-dak?      (equal? '((export-dak? #t))      ((sxpath "/export-dak?")      flags~))]
            [export-html?     (equal? '((export-html? #t))     ((sxpath "/export-html?")     flags~))]
+           [export-png?      (equal? '((export-png? #t))      ((sxpath "/export-png?")      flags~))]
            [export-ks?       (equal? '((export-ks? #t))       ((sxpath "/export-ks?")       flags~))]
            ;[export-stp?      (equal? '((export-stp? #t))      ((sxpath "/export-stp?")      flags~))]
            [export-xml?      (equal? '((export-xml? #t))      ((sxpath "/export-xml?")      flags~))]
@@ -123,6 +124,8 @@
       |#
       (when export-html?
         (ilog "  --export-html"))
+      (when export-png?
+        (ilog "  --export-png"))
       (when export-ks?
         (ilog "  --export-ks"))
       #|
@@ -182,9 +185,10 @@
                 import-png?
                 (and import-xml?
                      (or ;export-dak?
-                      export-html?
-                      ;export-stp?
-                      webserver?)))
+                         export-html?
+                         export-png?
+                         ;export-stp?
+                         webserver?)))
         #|
                   (and (or import-dak?
                            import-stp?)
@@ -363,15 +367,13 @@
     `(export-html? #t)]
    [("-K" "--export-ks")
     "Export Knitspeak .ks file"
-    `(import-ks? #t)]
-   #|
-   [("-P" "--export-png")
-    "Export color .png file"
+    `(export-ks? #t)]
+  [("-P" "--export-png")
+   "Export color .png file"
     `(export-png? #t)]
    [("-R" "--export-racket")
     "Export Racket source file"
     `(export-rkt? #t)]
-   |#
    #|
    [("-S" "--export-stp")
     "Export Designaknit .stp file"

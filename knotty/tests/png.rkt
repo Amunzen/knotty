@@ -134,6 +134,25 @@
                 #:cell-size 18
                 #:margin 3)
     (check-true (file-exists? tmp))
+    (let* ([bmp (read-bitmap tmp 'png)]
+           [w (send bmp get-width)]
+           [h (send bmp get-height)]
+           [pixels (make-bytes (* 4 w h))])
+      (send bmp get-argb-pixels 0 0 w h pixels)
+      (define distinct
+        (for/fold ([acc : (Listof Nonnegative-Fixnum) null])
+                  ([i (in-range 0 (* 4 w h) 4)])
+          (define r (bytes-ref pixels (+ i 1)))
+          (define g (bytes-ref pixels (+ i 2)))
+          (define b (bytes-ref pixels (+ i 3)))
+          (define color
+            (bitwise-ior (fxlshift (cast r Fixnum) 16)
+                         (fxlshift (cast g Fixnum) 8)
+                         (cast b Fixnum)))
+          (if (member color acc)
+              acc
+              (cons (cast color Nonnegative-Fixnum) acc))))
+      (check-true (> (length distinct) 1)))
     (delete-file tmp))
 
   )
