@@ -142,15 +142,13 @@
   ;; test `rownumber-abbr`
   (check-equal?
    (rownumber-abbr test-pattern 1 1 2)
-   '((abbr (@ [class "rownumber"]
-              [title "Row number 2\nKnit left-to-right on wrong side\nStitches consumed: 8\nStitches produced: 8\n"])
+   '((abbr (@ [title "Row number 2\nKnit left-to-right on wrong side\nStitches consumed: 8\nStitches produced: 8\n"])
            "2")))
 
   ;; test `rownumber-abbr`
   (check-equal?
    (rownumber-abbr test-pattern 1 1 5)
-   '((abbr (@ [class "rownumber"]
-              [title "Row number 5\nKnit right-to-left on right side\nStitches consumed: 8\nStitches produced: 0\nMemo: last row!"])
+   '((abbr (@ [title "Row number 5\nKnit right-to-left on right side\nStitches consumed: 8\nStitches produced: 0\nMemo: last row!"])
            "5")))
 
   ;; test `pattern-instructions`

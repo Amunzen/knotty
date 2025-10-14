@@ -1,35 +1,24 @@
 # Knotty
 
-Domain Specific Language for knitting patterns
+ニッティングパターンのためのドメイン特化言語 (Domain Specific Language)
 
 [![Coverage Status](https://coveralls.io/repos/github/t0mpr1c3/knotty/badge.svg?branch=main)](https://coveralls.io/github/t0mpr1c3/knotty?branch=main)
 
-[Documentation](https://t0mpr1c3.github.io/knotty/index.html)
+[ドキュメント](https://t0mpr1c3.github.io/knotty/index.html)
 
-## Description
+## 概要
 
-Grid-based editors are handy for colorwork.
-[Knitspeak](https://stitch-maps.com/about/knitspeak/) is great for lace.
-Knotty aims for the best of both worlds. It's a way to design knitting patterns
-that incorporate both textured stitches and multiple colors of yarn.
+Knotty は格子状の配色デザインと、レース編みで多用されるテキストベースの記述を統合することを目的にしたツールです。テクスチャのある編み目と複数色の糸を併用するパターンを、読みやすく・加工しやすい形式で記述できます。
 
-## Features
+## 特長
 
-Knotty patterns are encoded in a format that is easy for humans to write and parse,
-but is also highly structured.
+- パターンは人間が手で書きやすく、かつ機械で正確に解析できる形式で保存されます。
+- インタラクティブな編み図と文章化された手順を含む HTML として表示・保存が可能です。
+- Knitspeak 形式のインポート／エクスポートや、画像からのフェアアイルパターン生成をサポートしています。
+- 実装は [Typed Racket](https://docs.racket-lang.org/ts-guide/) 上のモジュール群として構成されており、詳細は [マニュアル](https://t0mpr1c3.github.io/knotty/index.html) を参照できます。
+- コマンドライン実行可能ファイル ([リリースページ](https://github.com/t0mpr1c3/knotty/releases)) から各形式の変換が行えます。最新版では HTML / XML に加え、静的な PNG チャートも書き出せます。
 
-Patterns can be viewed and saved in an HTML format that contains an interactive
-knitting chart and written instructions. You can also import and export Knitspeak
-files, and create Fair Isle patterns directly from color graphics.
-
-Knotty has been coded as a module for
-[Typed Racket](https://docs.racket-lang.org/ts-guide/). Reference information
-is available in the [manual](https://t0mpr1c3.github.io/knotty/index.html).
-
-A [Knotty executable](https://github.com/t0mpr1c3/knotty/releases) is also
-available that can be used from the command line to convert knitting patterns from
-one format to another. In addition to HTML and XML conversion, the CLI can now
-export static PNG charts. For example:
+例: XML を読み込み、チャートを PNG として出力する
 
 ```
 racket knotty-lib/cli.rkt \
@@ -38,12 +27,11 @@ racket knotty-lib/cli.rkt \
   knotty-lib/resources/example/lattice
 ```
 
-This writes `lattice-chart.png` alongside any copied CSS/JS assets.
+実行すると `lattice-chart.png` と、必要な CSS / JS アセットがカレントディレクトリにコピーされます。
 
-### Programmatic conversion examples
+## Racket からの変換例
 
-You can also script conversions directly in Racket. The following examples assume
-`lattice.xml` from `knotty-lib/resources/example/`.
+Racket スクリプトから直接変換処理を呼び出すこともできます。以下は `knotty-lib/resources/example/lattice.xml` を利用した例です。
 
 ```racket
 #lang racket
@@ -52,26 +40,21 @@ You can also script conversions directly in Racket. The following examples assum
 (define pattern
   (import-xml "knotty-lib/resources/example/lattice.xml"))
 
-;; save a copy of the source XML
+;; 元の XML を別名で保存
 (export-xml pattern "lattice-copy.xml")
 
-;; write a standalone HTML chart and written instructions
+;; 編み図と指示文を含む HTML を出力
 (export-html pattern "lattice.html" 1 1)
 
-;; render a PNG chart (repeat horizontally 2x, vertically 2x)
+;; PNG チャートを出力（横 2 × 縦 2 の繰り返し）
 (export-png pattern "lattice.png" #:h-repeats 2 #:v-repeats 2)
 ```
 
-## Getting Started
+## はじめ方
 
-Clone [this repository](https://github.com/t0mpr1c3/knotty).
+1. [リポジトリ](https://github.com/t0mpr1c3/knotty) をクローンします。
+2. [Racket](https://download.racket-lang.org/) の最新版をインストールします（GUI 版には DrRacket が同梱されています）。
+3. DrRacket を開き、メニューから「File > Install Package」を選択し、`knotty` を入力して「Install」を押します。
+4. リポジトリ内 `knotty-lib` ディレクトリにある `demo.rkt` を開き、右上の「Run」を押します。短いサンプルパターンと、独自のパターンを作る際の手順を説明したコメントが含まれています。
 
-Download the latest version of [Racket](https://download.racket-lang.org/)
-for your operating system. It comes with the graphical application DrRacket.
-Open DrRacket and select the menu option "File > Install Package". Type
-"knotty" into the text box and press "Install".
-
-Open the test script `demo.rkt` from the `knotty-lib` directory of the repository
-and press "Run" in the top right of the window. The demonstration script contains
-a very short knitting pattern, together with many lines of comments describing how
-to go about making your own.
+これで、自分のパターンを HTML / XML / PNG として自由に出力できる環境が整います。

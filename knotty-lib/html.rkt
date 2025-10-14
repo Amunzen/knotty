@@ -140,26 +140,22 @@
             [yrns (Chart-yarns c~)]
             [hand? (eq? 'hand (Options-technique options))]
             [r2l? (eq? 'right (Options-side options))])
-        `(div (@ [class "figure"])
-              (table (@ [class "figure"]
-                        [id "figure"]
-                        [height "fit-content"])
-                     (tbody
-                      ,@(for/list ([r (in-list (reverse (range height)))])
-                          (row-sxml p h-repeats v-repeats rows yrns hand? r))
-                      ,(ruler width r2l?))))))))
+        `(table
+          (tbody
+           ,@(for/list ([r (in-list (reverse (range height)))])
+               (row-sxml p h-repeats v-repeats rows yrns hand? r))
+           ,(ruler width r2l?)))))))
 
 ;; Returns SXML for ruler underneath chart.
 (define (ruler width r2l?)
-  `(tr (@ [class "figure"])
-       (td (@ [class "figure"]))
-       ,@(for/list ([x (in-range width)])
-           (let ([x~ (if r2l? (- width x -1) (add1 x))])
-             `(td (@ [class "figure"])
-                  ,(if (zero? (modulo x~ 10))
-                       (~a x~)
-                       "."))))
-       (td (@ [class "figure"]))))
+  `(tr
+    (td "")
+    ,@(for/list ([x (in-range width)])
+        (let ([x~ (if r2l? (- width x -1) (add1 x))])
+          `(td ,(if (zero? (modulo x~ 10))
+                    (~a x~)
+                    "."))))
+    (td "")))
 
 ;; Returns SXML for row of stitch symbol cells.
 (define (row-sxml p h-repeats v-repeats rows yrns hand? r)
@@ -167,19 +163,19 @@
          [rs? (Chart-row-rs? row)]
          [r2l? (Chart-row-r2l? row)]
          [sts (Chart-row-stitches row)]
-         [symbols ;: (Vectorof Symbol)
+         [symbols
           (vector-map
-           (λ (s) ;([s : Stitch])
+           (λ (s)
              (or (Stitch-symbol s) 'na))
            sts)]
-         [ys ;: (Vectorof (Option Byte))
+         [ys
           (vector-map
-           (λ (s) ;([s : Stitch])
+           (λ (s)
              (if (false? (Stitch-symbol s))
                  #f
                  (Stitch-yarn s)))
            sts)]
-         [colors ;: (Vectorof (Option String))
+         [colors
           (vector-map
            (λ (y)
              (if (false? y)
@@ -189,51 +185,42 @@
                        #f
                        (hex-color (Yarn-color yrn))))))
            ys)]
-         [rownumber (rownumber-abbr p h-repeats v-repeats (add1 r))])
-    `(tr (@ [class "figure"])
-         (td (@ [class "figure rownumber"])
-             (span (@ [class "figure rownumber"])
-                   ,@(if r2l? null rownumber)))
-         ,@(let-values ([(next-left next-right)
-                         (if (= r (sub1 (vector-length rows)))
-                             (values +inf.0
-                                     0)
-                             (values (~> r add1 (vector-ref rows _) Chart-row-align-left)
-                                     (- (Chart-row-align-right row)
-                                        (~> r add1 (vector-ref rows _) Chart-row-align-right))))])
-             (append
-              (for/list ([i (in-range (Chart-row-align-left row))])
-                (stitch-sxml hand?
-                             rs?
-                             'ns
-                             #f
-                             "FFFFFF"
-                             (string-append
-                              " empty"
-                              (if (> (add1 i) next-left) " borderTop" ""))))
-              (for/list ([i (in-range (vector-length sts))])
-                (stitch-sxml hand?
-                             rs?
-                             (vector-ref symbols i)
-                             (vector-ref ys i)
-                             (vector-ref colors i)
-                             ""))
-              (for/list ([i (in-range (Chart-row-align-right row))])
-                (stitch-sxml hand?
-                             rs?
-                             'ns
-                             #f
-                             "FFFFFF"
-                             (string-append
-                              " empty"
-                              (if (zero? i)
-                                  (if (< 0 next-right) " borderTopLeft" " borderLeft")
-                                  (if (< i next-right) " borderTop" "")))))))
-         (td (@ [class ,(string-append
-                         "figure rownumber"
-                         (if (zero? (Chart-row-align-right row)) " borderLeft" ""))])
-             (span (@ [class "figure rownumber"])
-                   ,@(if r2l? rownumber null))))))
+         [rownumber (rownumber-abbr p h-repeats v-repeats (add1 r))]
+         [empty '("")]
+         [left-content (if r2l? empty rownumber)]
+         [right-content (if r2l? rownumber empty)])
+    `(tr
+      (td ,@left-content)
+      ,@(let-values ([(next-left next-right)
+                      (if (= r (sub1 (vector-length rows)))
+                          (values +inf.0
+                                  0)
+                          (values (~> r add1 (vector-ref rows _) Chart-row-align-left)
+                                  (- (Chart-row-align-right row)
+                                     (~> r add1 (vector-ref rows _) Chart-row-align-right))))])
+          (append
+           (for/list ([i (in-range (Chart-row-align-left row))])
+             (stitch-sxml hand?
+                          rs?
+                          'ns
+                          #f
+                          "FFFFFF"
+                          ""))
+           (for/list ([i (in-range (vector-length sts))])
+             (stitch-sxml hand?
+                          rs?
+                          (vector-ref symbols i)
+                          (vector-ref ys i)
+                          (vector-ref colors i)
+                          ""))
+           (for/list ([i (in-range (Chart-row-align-right row))])
+             (stitch-sxml hand?
+                          rs?
+                          'ns
+                          #f
+                          "FFFFFF"
+                          ""))))
+      (td ,@right-content))))
 
 ;; Returns SXML for stitch symbol cell.
 (define (stitch-sxml hand? rs? s y c cls)
@@ -251,31 +238,23 @@
            (if rs? "RS" "WS")
            "). "
            (if (false? instr) "" instr))])
-    `(td (@ [class ,(string-append
-                     "figure symbol"
-                     cls
-                     (if blank? " blank" "")
-                     (if ns? " nostitch" ""))]
-            ,@(if (or blank? ns?)
-                  null
-                  `([bgcolor ,(string-append "#" c)]))
-            ,@(if (Stitchtype-cable? st)
-                  `((colspan ,(~a (Stitchtype-stitches-out st))))
-                  null))
-         (span (@ [class ,(string-append
-                           "figure symbol"
-                           cls
-                           (if (Stitchtype-cable? st) " cable" "")
-                           (if blank? " blank" "")
-                           (if ns? " nostitch" ""))]
-                  [title ,title]
-                  ,@(if (or blank? ns?)
-                        null
-                        `([style ,(string-append "color: " (contrast-color-hex c))])))
-               ,(bytes->string/utf-8 (Stitchtype-rs-string st))
-               ,@(if blank?
-                     '((div (@ [class "strikethrough"])))
-                     null)))))
+    (let* ([attrs (append
+                   (if (or blank? ns?)
+                       null
+                       `(([title ,title])))
+                   (if (or blank? ns? (false? c))
+                       null
+                       `(([style ,(string-append "background-color:#" c)])))
+                   (if (Stitchtype-cable? st)
+                       `(([colspan ,(~a (Stitchtype-stitches-out st))]))
+                       null))]
+           [content (cond
+                      [blank? ""]
+                      [ns? ""]
+                      [else (bytes->string/utf-8 (Stitchtype-rs-string st))])])
+      (if (null? attrs)
+          `(td ,content)
+          `(td (@ ,@attrs) ,content)))))
 
 ;; Returns hover text for row number.
 (define (rownumber-abbr p h-repeats v-repeats n)
@@ -320,8 +299,7 @@
                                 (if (zero? (string-length memo))
                                     ""
                                     (format "Memo: ~a" memo))))))])
-    `((abbr (@ [class "rownumber"]
-               [title ,result])
+    `((abbr (@ [title ,result])
             ,(~a n)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -786,73 +764,13 @@
 (define (pattern-template
          op p inputs
          [to-text? #f])
-  (let* ([technique (Options-technique (Pattern-options p))]
-         #|
-         [hide-float? (not (or (eq? 'hand technique)
-                               (eq? 'machine-fair-isle technique)))]
-         |#
-         [h  (max 1 (hash-ref inputs 'hreps))]
-         [v  (max 1 (hash-ref inputs 'vreps))]
-         [f  (hash-ref inputs 'float)]
-         [n? (int->bool (hash-ref inputs 'notes))]
-         [y? (int->bool (hash-ref inputs 'yarn))]
-         [i? (int->bool (hash-ref inputs 'instr))]
-         [s  (hash-ref inputs 'size)])
-    #|
-    (when hide-float?
-      (hash-set! inputs 'float -1))
-    |#
+  (let* ([h (max 1 (hash-ref inputs 'hreps))]
+         [v (max 1 (hash-ref inputs 'vreps))]
+         [f (hash-ref inputs 'float)]
+         [table-sxml (figure-sxml p h v f)])
     (html-template
      #:port op
-     (html
-      (head
-       (title (% (pattern-name p)))
-       (meta (@ [http-equiv "Content-Type"]
-                [content "text/html; charset=UTF-8"]))
-       (link (@ [rel "stylesheet"]
-                [type "text/css"]
-                [href "css/knotty-manual.css"]
-                [title "default"]))
-       (link (@ [rel "stylesheet"]
-                [type "text/css"]
-                [href "css/knotty.css"]
-                [title "default"]))
-       (link (@ [rel "icon"]
-                [href "icon/favicon.ico"]))
-       (%sxml (font-face "Stitchmastery Dash"
-                         "font/StitchmasteryDash.ttf"))
-       (%sxml (font-face "Georgia Pro"
-                         "font/georgia.ttf")))
-      (body
-       (script (%verbatim (format "var aspectRatio = ~a;\n"
-                                  (~> p
-                                      Pattern-options
-                                      Options-gauge
-                                      gauge->aspect-ratio))))
-       (script (@ [src "js/knotty.js"]))
-       (div (@ [class "outside-container"])
-            (div (@ [class "container"])
-                 (%sxml (title-sxml p))
-                 (div (@ [class "outside-details"])
-                      (div (@ [class "details"])
-                           (%sxml (attribution-sxml p))
-                           (%sxml (keywords-sxml p))
-                           (%sxml (gauge-sxml p))
-                           (%sxml (notes-sxml p n?))))
-                 (div (@ [class "outside-main"])
-                      (div (@ [class "main"])
-                           (div (@ [class "figure"]
-                                   [id "resizable"]
-                                   [style "height: " (% s) ";"])
-                                (%write (unless to-text?
-                                          (html-template
-                                           (%sxml (figure-sxml p h v f))))))
-                           (%write (unless to-text?
-                                     (html-template
-                                      (%sxml (form-sxml inputs)))))
-                           (%sxml (yarn-sxml p y?))
-                           (%sxml (instructions-sxml p i?))))
-                 (%sxml footer))))))))
+     (%sxml table-sxml))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
