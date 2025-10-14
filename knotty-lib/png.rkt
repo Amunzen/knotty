@@ -23,8 +23,8 @@
 (require typed/racket/draw
          racket/fixnum
          racket/file)
-(require/typed racket/draw
-  [register-font-file (-> Path-String Void)])
+(require/typed "font-loader.rkt"
+  [register-font! (String -> Boolean)])
 (require "global.rkt"
          "util.rkt"
          "colors.rkt"
@@ -46,15 +46,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Ensure Stitchmastery Dash font is available for bitmap rendering.
-(define stitchmastery-font-name : String "StitchMastery Dash")
+(define stitchmastery-font-name : String "Stitchmastery Dash")
 (define stitchmastery-font-path
   (build-path resources-path "font" "StitchMasteryDash.ttf"))
+(define stitchmastery-font-path-str : String (path->string stitchmastery-font-path))
 
-(with-handlers ([exn:fail?
-                 (λ ([e : exn:fail?])
-                   (wlog (format "Failed to load StitchMastery font: ~a" (exn-message e))))])
-  (when (file-exists? stitchmastery-font-path)
-    (register-font-file stitchmastery-font-path)))
+(define (register-dash-font)
+  (if (file-exists? stitchmastery-font-path)
+      (if (register-font! stitchmastery-font-path-str)
+          (void)
+          (wlog "Could not register StitchMastery font with fontconfig"))
+      (wlog "StitchMastery font file not found")))
+
+(register-dash-font)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -320,18 +324,16 @@
 (: make-font-for-cell : Positive-Integer -> (Instance Font%))
 (define (make-font-for-cell cell-size)
   (define font-size
-    (max 10
-         (inexact->exact
-          (round (* (real->double-flonum cell-size) 0.6)))))
-  (make-object font%
-               font-size
-               stitchmastery-font-name
-               'modern
-               'normal
-               'normal
-               #f
-               'aligned
-               'aligned))
+    (let ([s (max 10
+                 (inexact->exact
+                  (round (* (real->double-flonum cell-size) 0.6))))])
+      (cast s Positive-Integer)))
+  (make-font #:size font-size
+             #:family 'modern
+             #:style 'normal
+             #:weight 'normal
+             #:smoothing 'smoothed
+             #:face stitchmastery-font-name))
 
 (: hex->brush : Nonnegative-Fixnum -> (Instance Brush%))
 (define (hex->brush color)
