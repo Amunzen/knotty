@@ -241,12 +241,12 @@
     (let* ([attrs (append
                    (if (or blank? ns?)
                        null
-                       `(([title ,title])))
+                       `((title ,title)))
                    (if (or blank? ns? (false? c))
                        null
-                       `(([style ,(string-append "background-color:#" c)])))
+                       `((style ,(string-append "background-color:#" c))))
                    (if (Stitchtype-cable? st)
-                       `(([colspan ,(~a (Stitchtype-stitches-out st))]))
+                       `((colspan ,(~a (Stitchtype-stitches-out st))))
                        null))]
            [content (cond
                       [blank? ""]

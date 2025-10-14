@@ -279,36 +279,47 @@
     (pattern
       ((row 1 2) k7 p3)))
    '(*TOP*
-  (div
-   (table
-    (tbody
-     (tr
-      (td (span (abbr "2")))
-      (td (span "p"))
-      (td (span "p"))
-      (td (span "p"))
-      (td (span "p"))
-      (td (span "p"))
-      (td (span "p"))
-      (td (span "p"))
-      (td (span "k"))
-      (td (span "k"))
-      (td (span "k"))
-      (td (span)))
-     (tr
-      (td (span))
-      (td (span "p"))
-      (td (span "p"))
-      (td (span "p"))
-      (td (span "k"))
-      (td (span "k"))
-      (td (span "k"))
-      (td (span "k"))
-      (td (span "k"))
-      (td (span "k"))
-      (td (span "k"))
-      (td (span (abbr "1"))))
-     (tr (td) (td ".") (td "10") (td ".") (td ".") (td ".") (td ".") (td ".") (td ".") (td ".") (td ".") (td)))))))
+     (table
+      (tbody
+       (tr
+       (td (abbr "2"))
+       (td "p")
+       (td "p")
+       (td "p")
+       (td "p")
+       (td "p")
+       (td "p")
+        (td "p")
+       (td "k")
+       (td "k")
+       (td "k")
+       (td ""))
+       (tr
+        (td "")
+        (td "p")
+        (td "p")
+        (td "p")
+        (td "k")
+        (td "k")
+        (td "k")
+        (td "k")
+        (td "k")
+        (td "k")
+        (td "k")
+        (td (abbr "1")))
+       (tr
+        (td "")
+        (td ".")
+        (td "10")
+        (td ".")
+        (td ".")
+        (td ".")
+        (td ".")
+        (td ".")
+        (td ".")
+        (td ".")
+        (td ".")
+        (td ""))))))
 
   ;; test `pattern-form`
   ;;
