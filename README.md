@@ -28,7 +28,39 @@ is available in the [manual](https://t0mpr1c3.github.io/knotty/index.html).
 
 A [Knotty executable](https://github.com/t0mpr1c3/knotty/releases) is also
 available that can be used from the command line to convert knitting patterns from
-one format to another.
+one format to another. In addition to HTML and XML conversion, the CLI can now
+export static PNG charts. For example:
+
+```
+racket knotty-lib/cli.rkt \
+  --import-xml --export-png \
+  --output lattice-chart \
+  knotty-lib/resources/example/lattice
+```
+
+This writes `lattice-chart.png` alongside any copied CSS/JS assets.
+
+### Programmatic conversion examples
+
+You can also script conversions directly in Racket. The following examples assume
+`lattice.xml` from `knotty-lib/resources/example/`.
+
+```racket
+#lang racket
+(require knotty-lib)
+
+(define pattern
+  (import-xml "knotty-lib/resources/example/lattice.xml"))
+
+;; save a copy of the source XML
+(export-xml pattern "lattice-copy.xml")
+
+;; write a standalone HTML chart and written instructions
+(export-html pattern "lattice.html" 1 1)
+
+;; render a PNG chart (repeat horizontally 2x, vertically 2x)
+(export-png pattern "lattice.png" #:h-repeats 2 #:v-repeats 2)
+```
 
 ## Getting Started
 
