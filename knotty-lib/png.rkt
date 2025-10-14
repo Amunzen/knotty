@@ -36,7 +36,9 @@
          "gauge.rkt"
          "options.rkt"
          "repeats.rkt"
-         "pattern.rkt")
+         "pattern.rkt"
+         "chart.rkt"
+         "chart-row.rkt")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -277,5 +279,152 @@
             (if (= c x) (loop (sub1 i) c (add1 k) v)
                 (loop (sub1 i) x 1 ((inst cons (Pairof Positive-Integer Byte) (Listof (Pairof Positive-Integer Byte)))
                                     ((inst cons Positive-Integer Byte) k c) v))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Helpers for PNG export.
+
+(: fixnum->byte : Fixnum -> Byte)
+(define (fixnum->byte n)
+  (if (or (< n 0) (> n 255))
+      (error 'export-png "invalid channel value ~a" n)
+      (cast n Byte)))
+
+(: color-components : Nonnegative-Fixnum -> (Values Byte Byte Byte))
+(define (color-components c)
+  (values (fixnum->byte (fxand (fxrshift c 16) #xFF))
+          (fixnum->byte (fxand (fxrshift c 8) #xFF))
+          (fixnum->byte (fxand c #xFF))))
+
+(: draw-strikethrough : (Instance DC<%>) Real Real Real Real -> Void)
+(define (draw-strikethrough dc x y w h)
+  (send dc set-pen "red" 2 'solid)
+  (send dc draw-line x (+ y (/ h 2.0)) (+ x w) (+ y (/ h 2.0))))
+
+(: make-font-for-cell : Positive-Integer -> (Instance Font%))
+(define (make-font-for-cell cell-size)
+  (define font-size
+    (max 10
+         (inexact->exact
+          (round (* (real->double-flonum cell-size) 0.6)))))
+  (make-object font% font-size 'modern))
+
+(: pattern->bitmap (->* (Pattern)
+                        (Positive-Integer Positive-Integer Positive-Integer Nonnegative-Integer)
+                        (Instance Bitmap%)))
+(define (pattern->bitmap p
+                         [h-repeats 1]
+                         [v-repeats 1]
+                         [cell-size 36]
+                         [margin 2])
+  (define chart (pattern->chart p h-repeats v-repeats))
+  (define rows (Chart-rows chart))
+  (define width (* (Chart-width chart) cell-size))
+  (define height (* (Chart-height chart) cell-size))
+  (define total-width (+ width (* 2 margin)))
+  (define total-height (+ height (* 2 margin)))
+  (define bmp (make-object bitmap% total-width total-height))
+  (define dc (new bitmap-dc% [bitmap bmp]))
+  (send dc clear)
+  (send dc set-brush "white" 'solid)
+  (send dc set-pen "white" 1 'transparent)
+  (send dc draw-rectangle 0 0 total-width total-height)
+  (define yarns (Chart-yarns chart))
+  (define symbol-font (make-font-for-cell cell-size))
+  (define border-pen (make-object pen% "black" 1 'solid))
+  (define cache-brushes : (HashTable String (Instance Brush%)) (make-hasheq))
+  (: brush-for : String -> (Instance Brush%))
+  (define (brush-for color)
+    (if (hash-has-key? cache-brushes color)
+        (hash-ref cache-brushes color)
+        (let ([b (make-object brush% color 'solid)])
+          (hash-set! cache-brushes color b)
+          b)))
+  (: resolve-yarn-color : Stitch Chart-row -> Nonnegative-Fixnum)
+  (define (resolve-yarn-color st row)
+    (let* ([y (Stitch-yarn st)]
+           [dy : Byte (Chart-row-default-yarn row)]
+           [idx : Byte (if (false? y) dy y)]
+           [i : Nonnegative-Fixnum (cast idx Nonnegative-Fixnum)])
+      (if (>= i (vector-length yarns))
+          default-yarn-color
+          (Yarn-color (vector-ref yarns i)))))
+  (for ([row-index (in-range (Chart-height chart))])
+    (define row : Chart-row (vector-ref rows (- (Chart-height chart) row-index 1)))
+    (define base-y (+ margin (* row-index cell-size)))
+    (define align-left (Chart-row-align-left row))
+    (define align-right (Chart-row-align-right row))
+    (define stitches : (Vectorof Stitch) (Chart-row-stitches row))
+    (define rs? (Chart-row-rs? row))
+    (define row-symbols (vector-length stitches))
+    (: draw-cell : Integer String String String Boolean Boolean -> Void)
+    (define (draw-cell column color-str text text-color blank? nostitch?)
+      (define base-x (+ margin (* column cell-size)))
+      (send dc set-brush (brush-for color-str))
+      (send dc set-pen border-pen)
+      (send dc draw-rectangle base-x base-y cell-size cell-size)
+      (cond
+        [blank?
+         (draw-strikethrough dc base-x base-y cell-size cell-size)]
+        [nostitch?
+         (void)]
+        [else
+         (when (> (string-length text) 0)
+           (send dc set-text-foreground text-color)
+           (send dc set-font symbol-font)
+           (let-values ([(tw th _descent _leading)
+                         (send dc get-text-extent text symbol-font)])
+             (define tx (+ base-x (/ (- cell-size tw) 2.0)))
+             (define ty (+ base-y (/ (- cell-size th) 2.0)))
+             (send dc draw-text text tx ty)))]))
+    ;; leading blanks (no stitch)
+    (for ([c (in-range align-left)])
+      (draw-cell c "#EEEEEE" "" "#888888" #f #t))
+    ;; actual stitches
+    (for ([i (in-range row-symbols)])
+      (define st : Stitch (vector-ref stitches i))
+      (define sym (Stitch-symbol st))
+      (define blank? (eq? sym 'na))
+      (define nostitch? (eq? sym 'ns))
+      (define color
+        (cond
+          [nostitch? #xEEEEEE]
+          [blank? #xFFFFFF]
+          [else (resolve-yarn-color st row)]))
+      (define background (format "#~a" (hex-color color)))
+      (define text-bytes
+        (let ([st-type (get-stitchtype sym)])
+          (cond
+            [blank? #""]
+            [rs? (Stitchtype-rs-string st-type)]
+            [else (Stitchtype-ws-string st-type)])))
+      (define text
+        (let ([s (bytes->string/utf-8 text-bytes)])
+          (if (string=? s "") (symbol->string sym) s)))
+      (define text-color
+        (if (or nostitch? blank?) "#000000"
+            (contrast-color-hex (hex-color color))))
+      (draw-cell (+ align-left i) background text text-color blank? nostitch?))
+    ;; trailing blanks (no stitch)
+    (for ([c (in-range align-right)])
+      (draw-cell (+ align-left row-symbols c) "#EEEEEE" "" "#888888" #f #t)))
+  (send dc set-bitmap #f)
+  bmp)
+
+;; Exports pattern as PNG image.
+(: export-png (->* (Pattern Path-String)
+                   (#:h-repeats Positive-Integer
+                    #:v-repeats Positive-Integer
+                    #:cell-size Positive-Integer
+                    #:margin Nonnegative-Integer)
+                   Void))
+(define (export-png p filename
+                    #:h-repeats [h 1]
+                    #:v-repeats [v 1]
+                    #:cell-size [cell-size 36]
+                    #:margin [margin 2])
+  (define bmp (pattern->bitmap p h v cell-size margin))
+  (unless (send bmp save-file filename 'png)
+    (error 'export-png "failed to save png to ~a" filename)))
 
 ;; end

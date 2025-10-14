@@ -206,7 +206,9 @@
                   [import-png? (import-png input-filename)]
                   ;[import-stp? (import-stp input-filename generic-matches?)]
                   [import-xml? (import-xml input-filename)]
-                  [else (error invalid-input)])])
+                  [else (error invalid-input)])]
+                [repeats-h (if (null? repeats) 1 (cadar repeats))]
+                [repeats-v (if (null? repeats) 1 (caddar repeats))])
           #|
             (when export-dak?
               (let ([out-file-path (path-replace-extension output-filestem #".dak")])
@@ -222,12 +224,10 @@
               (let* ([dir (cond [(eq? 'relative base) "."]
                                 [(false? base) "/"]
                                 [else base])]
-                     [h (if (null? repeats) 1 (cadar repeats))]
-                     [v (if (null? repeats) 1 (caddar repeats))]
                      [out-file-path (path-replace-extension output-filestem #".html")])
                 (replace-file-if-forced force?
                                         out-file-path
-                                        (thunk (export-html p out-file-path h v))
+                                        (thunk (export-html p out-file-path repeats-h repeats-v))
                                         "html")
                 (overwrite-files
                  (build-path resources-path "css")
@@ -245,6 +245,14 @@
                  (build-path resources-path "icon")
                  (build-path dir "icon")
                  '("favicon.ico")))))
+          (when export-png?
+            (let ([out-file-path (path-replace-extension output-filestem #".png")])
+              (replace-file-if-forced force?
+                                      out-file-path
+                                      (thunk (export-png p out-file-path
+                                                         #:h-repeats repeats-h
+                                                         #:v-repeats repeats-v))
+                                      "png")))
           (when export-ks?
             (let ([out-file-path (path-replace-extension output-filestem #".ks")])
               (replace-file-if-forced force?

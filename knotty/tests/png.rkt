@@ -21,7 +21,8 @@
 (module+ test
   (require typed/rackunit
            typed/racket/draw
-           racket/fixnum)
+           racket/fixnum
+           racket/file)
   (require "../../knotty-lib/colors.rkt"
            "../../knotty-lib/stitch.rkt"
            "../../knotty-lib/yarn.rkt"
@@ -32,27 +33,30 @@
            "../../knotty-lib/rowmap.rkt"
            "../../knotty-lib/gauge.rkt"
            "../../knotty-lib/pattern.rkt"
+           "../../knotty-lib/chart.rkt"
            "../../knotty-lib/png.rkt")
 
-  (check-equal?
-   (let* ([small
-           (bytes-append
+  (define small-bytes
+    (bytes-append
           #"\211PNG\r\n\32\n\0\0\0\r"
           #"IHDR\0\0\0\1\0\0\0\2\b\6\0\0\0\231\201\266'\0\0\0\22"
           #"IDAT\b\231c\220\226\226\376\317\304\302\302\302\0\0\b\272\1_QO\262\234\0\0\0\0"
-          #"IEND\256B`\202")]
-          [input (open-input-bytes small)]
-          [pic (read-bitmap input 'png)])
-     (bitmap->pattern pic))
+          #"IEND\256B`\202"))
+  (define small-pattern
+    (let* ([input (open-input-bytes small-bytes)]
+           [pic (read-bitmap input 'png)])
+      (bitmap->pattern pic)))
+
+  (check-equal?
+   small-pattern
    (pattern
      (yarn #x1B1B1B "Nero")
      (yarn #x1F1F1F "Nero (2)")
      ((row 1) (cc1 k1))
      ((row 2) p1)))
 
-  (check-equal?
-   (let* ([megaman
-           (bytes-append
+  (define megaman-bytes
+    (bytes-append
             #"\211PNG\r\n\32\n\0\0\0\r"
             #"IHDR\0\0\0\e\0\0\0\34\b\6\0\0\0\220\321\304\355\0\0\0\6bKGD\0\0\0\377\0\377j\331`\37\0\0\1S"
             #"IDATH\307\335\226\341\255\204 \20\204g\f}\234\235\234\245\330\211kg\330\tW\t\357\a\242\200(\350\221\373\361HL\324\b\237\273;\263@\21\261\370"
@@ -62,10 +66,14 @@
             #"\330\347\352\27\200n\325,\333-B\2007qx\245?pb\360k\201\310P\257D\262h\201\2L\337\334{t\243\16R\250\307\243v\345\244;$\317\345\216\236\233w\310"
             #"t\351\f\0225\3424\272P\251\25{\332%,Rf\262\360a'\230\27\340\304_E\201\34&\371\250|\4^\245\363\22E|\5S\247\220\234\262\202T\211\b\204\214\277["
             #"\357}\355R\260*\32\372\321\361k\207\206@\2255\362\255\205\353\277\347\277=\21\377\1\245\31\265\270\300A\314#\0\0\0\0"
-            #"IEND\256B`\202")]
-          [input (open-input-bytes megaman)]
-          [pic (read-bitmap input 'png)])
-     (bitmap->pattern pic #:form 'circular))
+            #"IEND\256B`\202"))
+  (define megaman-pattern
+    (let* ([input (open-input-bytes megaman-bytes)]
+           [pic (read-bitmap input 'png)])
+      (bitmap->pattern pic #:form 'circular)))
+
+  (check-equal?
+   megaman-pattern
    (pattern
      #:form 'circular
      (yarn #x808080 "Grey")
@@ -102,6 +110,31 @@
      ((row 26) (cw "000000000000011100000000000"))
      ((row 27) (cw "000000000000000000000000000"))
      ((row 28) (cw "000000000000000000000000000"))))
+
+  (test-case "pattern->bitmap renders bitmap with expected dimensions"
+    (define cell-size 20)
+    (define margin 4)
+    (define bmp (pattern->bitmap small-pattern 1 1 cell-size margin))
+    (check-true (is-a? bmp bitmap%))
+    (define chart (pattern->chart small-pattern))
+    (check-equal? (send bmp get-width)
+                  (+ (* (Chart-width chart) cell-size)
+                     (* 2 margin)))
+    (check-equal? (send bmp get-height)
+                  (+ (* (Chart-height chart) cell-size)
+                     (* 2 margin))))
+
+  (test-case "export-png writes a PNG file"
+    (define tmp (make-temporary-file "knotty-png-~a.png"))
+    ;; make-temporary-file creates the file; remove so export-png can recreate it
+    (when (file-exists? tmp) (delete-file tmp))
+    (export-png small-pattern tmp
+                #:h-repeats 1
+                #:v-repeats 1
+                #:cell-size 18
+                #:margin 3)
+    (check-true (file-exists? tmp))
+    (delete-file tmp))
 
   )
 ;; end
