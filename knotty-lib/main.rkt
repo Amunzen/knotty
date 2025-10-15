@@ -47,6 +47,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
          (all-from-out "chart-row.rkt")
          (all-from-out "chart.rkt")
          (all-from-out "png.rkt")
+         (all-from-out "export-bundle.rkt")
          ;(all-from-out "dak.rkt")
          (all-from-out "xml.rkt")
          (all-from-out named-arguments/square-brackets))
@@ -72,6 +73,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
          "chart-row.rkt"
          "chart.rkt"
          "png.rkt"
+         "export-bundle.rkt"
          ;"dak.rkt"
          "xml.rkt"
          "gui.rkt"

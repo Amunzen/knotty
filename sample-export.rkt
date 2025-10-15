@@ -14,31 +14,17 @@ define sample-pattern
 define output-dir
   (build-path (current-directory) "sample-output")
 
-when (not (directory-exists? output-dir))
-  (make-directory output-dir)
+define outputs
+  (export-pattern-bundle sample-pattern output-dir
+                         #:basename "sample-pattern"
+                         #:overwrite? #t)
 
-define html-path
-  (build-path output-dir "sample-pattern.html")
-
-define xml-path
-  (build-path output-dir "sample-pattern.xml")
-
-define instructions-path
-  (build-path output-dir "sample-pattern.txt")
-
-when (file-exists? html-path)
-  (delete-file html-path)
-
-when (file-exists? xml-path)
-  (delete-file xml-path)
-
-when (file-exists? instructions-path)
-  (delete-file instructions-path)
-
-export-html sample-pattern html-path
-export-xml sample-pattern xml-path
-export-instructions sample-pattern instructions-path
+define html-path (hash-ref outputs 'html)
+define xml-path (hash-ref outputs 'xml)
+define instructions-path (hash-ref outputs 'text)
+define png-path (hash-ref outputs 'png)
 
 printf "HTML written to ~a\n" (path->string html-path)
 printf "XML written to ~a\n" (path->string xml-path)
 printf "Instructions written to ~a\n" (path->string instructions-path)
+printf "PNG written to ~a\n" (path->string png-path)
