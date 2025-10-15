@@ -27,6 +27,7 @@
 
   (require racket/cmdline
            racket/system        ;; for XSLT system calls
+           racket/path
            syntax/parse/define  ;; for `define-syntax-parse-rule`
            sxml/sxpath)
   (require "global.rkt"
@@ -216,8 +217,14 @@
                   ;[import-stp? (import-stp input-filename generic-matches?)]
                   [import-xml? (import-xml input-filename)]
                   [else (error invalid-input)])]
-                [repeats-h (if (null? repeats) 1 (cadar repeats))]
-                [repeats-v (if (null? repeats) 1 (caddar repeats))])
+               [import-kind
+                (cond
+                  [import-ks? 'ks]
+                  [import-png? 'png]
+                  [import-xml? 'xml]
+                  [else #f])]
+               [repeats-h (if (null? repeats) 1 (cadar repeats))]
+               [repeats-v (if (null? repeats) 1 (caddar repeats))])
           #|
             (when export-dak?
               (let ([out-file-path (path-replace-extension output-filestem #".dak")])
@@ -240,8 +247,7 @@
                                          #:overwrite? force?
                                          #:h-repeats repeats-h
                                          #:v-repeats repeats-v))
-                (for ([entry (in-hash outputs)])
-                  (define-values (fmt path) entry)
+                (for ([(fmt path) (in-hash outputs)])
                   (ilog (format "    ~a -> ~a"
                                 fmt
                                 (path->string path))))
@@ -260,7 +266,10 @@
                 (overwrite-files
                  (build-path resources-path "icon")
                  (build-path dir "icon")
-                 '("favicon.ico")))))
+                 '("favicon.ico"))
+                (write-bundle-source dir basename force?
+                                     import-kind input-filename
+                                     repeats-h repeats-v))))
           (when (and export-html?
                      (not export-bundle?))
             (let-values ([(base name dir?) (split-path output-filestem)])
@@ -344,6 +353,47 @@
       (copy-file (build-path src-dir-path  f)
                  (build-path dest-dir-path f)
                  #:exists-ok? #t)))
+
+  (define (bundle-script-content import-kind import-path basename repeats-h repeats-v)
+    (define import-line
+      (case import-kind
+        [(xml) (format "  import-xml ~s" import-path)]
+        [(ks)  (format "  import-ks ~s" import-path)]
+        [(png) (format "  import-png ~s" import-path)]
+        [else "  (error \"pattern source unavailable\")"]))
+    (string-append
+     "#lang sweet-exp typed/racket\n\n"
+     "require \"knotty-lib/main.rkt\"\n\n"
+     "define pattern\n"
+     import-line "\n\n"
+     (format "export-pattern-bundle pattern ~s\n" ".")
+     (format "                      #:basename ~s\n" basename)
+     "                      #:overwrite? #t\n"
+     (format "                      #:h-repeats ~a\n" repeats-h)
+     (format "                      #:v-repeats ~a\n" repeats-v)))
+
+  (define (write-bundle-source dir basename force? import-kind input-path repeats-h repeats-v)
+    (when import-kind
+      (define dir-abs (path->complete-path dir))
+      (define input-abs (path->complete-path input-path))
+      (define rel-input (find-relative-path dir-abs input-abs))
+      (define import-path-str
+        (if (path? rel-input)
+            (path->string rel-input)
+            (path->string input-abs)))
+      (define script-content
+        (bundle-script-content import-kind import-path-str basename repeats-h repeats-v))
+      (define script-path (build-path dir (string-append basename ".rkt")))
+      (replace-file-if-forced
+       force?
+       script-path
+       (thunk
+        (call-with-output-file script-path
+          (lambda (out)
+            (display script-content out)
+            (newline out))
+          #:exists 'replace))
+       "rkt")))
 
   (define (replace-file-if-forced force? file-path thunk suffix)
     (let ([file-exists-msg "file ~a exists, use option --force to overwrite it"])
