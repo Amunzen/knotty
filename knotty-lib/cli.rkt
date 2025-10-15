@@ -43,6 +43,7 @@
            "pattern.rkt"
            "xml.rkt"
            "png.rkt"
+           "export-bundle.rkt"
            ;"dak.rkt"
            "knitspeak.rkt"
            "serv.rkt"
@@ -72,6 +73,7 @@
            ;[export-dak?      (equal? '((export-dak? #t))      ((sxpath "/export-dak?")      flags~))]
            [export-html?     (equal? '((export-html? #t))     ((sxpath "/export-html?")     flags~))]
            [export-png?      (equal? '((export-png? #t))      ((sxpath "/export-png?")      flags~))]
+           [export-bundle?   (equal? '((export-bundle? #t))   ((sxpath "/export-bundle?")   flags~))]
            [export-ks?       (equal? '((export-ks? #t))       ((sxpath "/export-ks?")       flags~))]
            ;[export-stp?      (equal? '((export-stp? #t))      ((sxpath "/export-stp?")      flags~))]
            [export-xml?      (equal? '((export-xml? #t))      ((sxpath "/export-xml?")      flags~))]
@@ -124,6 +126,8 @@
       |#
       (when export-html?
         (ilog "  --export-html"))
+      (when export-bundle?
+        (ilog "  --export-bundle"))
       (when export-png?
         (ilog "  --export-png"))
       (when export-ks?
@@ -187,6 +191,7 @@
                      (or ;export-dak?
                          export-html?
                          export-png?
+                         export-bundle?
                          ;export-stp?
                          webserver?)))
         #|
@@ -221,7 +226,37 @@
                                         (thunk (export-stp p out-file-path))
                                         "dak")))
             |#
-          (when export-html?
+          (when export-bundle?
+            (let-values ([(base name dir?) (split-path output-filestem)])
+              (when (symbol? name)
+                (error 'knotty "invalid filename"))
+              (let* ([dir (cond [(eq? 'relative base) "."]
+                                [(false? base) "/"]
+                                [else base])]
+                     [basename (path->string name)])
+                (export-pattern-bundle p dir
+                                       #:basename basename
+                                       #:overwrite? force?
+                                       #:h-repeats repeats-h
+                                       #:v-repeats repeats-v)
+                (overwrite-files
+                 (build-path resources-path "css")
+                 (build-path dir "css")
+                 '("knotty.css" "knotty-manual.css"))
+                (overwrite-files
+                 (build-path resources-path "js")
+                 (build-path dir "js")
+                 '("knotty.js"))
+                (overwrite-files
+                 (build-path resources-path "font")
+                 (build-path dir "font")
+                 '("StitchMasteryDash.ttf" "georgia.ttf"))
+                (overwrite-files
+                 (build-path resources-path "icon")
+                 (build-path dir "icon")
+                 '("favicon.ico")))))
+          (when (and export-html?
+                     (not export-bundle?))
             (let-values ([(base name dir?) (split-path output-filestem)])
               (when (symbol? name)
                 (error 'knotty "invalid filename"))
@@ -249,7 +284,8 @@
                  (build-path resources-path "icon")
                  (build-path dir "icon")
                  '("favicon.ico")))))
-          (when export-png?
+          (when (and export-png?
+                     (not export-bundle?))
             (let ([out-file-path (path-replace-extension output-filestem #".png")])
               (replace-file-if-forced force?
                                       out-file-path
@@ -271,7 +307,8 @@
                                         (thunk (export-stp p out-file-path))
                                         "stp")))
             |#
-          (when export-xml?
+          (when (and export-xml?
+                     (not export-bundle?))
             (let ([out-file-path (path-replace-extension output-filestem #".xml")])
               (replace-file-if-forced force?
                                       out-file-path
@@ -365,6 +402,9 @@
    [("-H" "--export-html")
     "Export chart and instructions as webpage"
     `(export-html? #t)]
+   [("-B" "--export-bundle")
+    "Export HTML, XML, text instructions, and PNG together"
+    `(export-bundle? #t)]
    [("-K" "--export-ks")
     "Export Knitspeak .ks file"
     `(export-ks? #t)]
