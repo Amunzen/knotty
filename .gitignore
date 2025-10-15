@@ -24,3 +24,4 @@ knotty-lib/resources/backups
 *.xcf
 *.zip
 *.CHECKSUM
+sample-output/
