@@ -189,6 +189,11 @@ By default, the application saves output files with the same filename stem as
 the input file. The @elem[#:style typewriter]{-o} option allows other
 filenames to be exported.
 
+When you want HTML, XML, text instructions, and a PNG in one step, add
+@elem[#:style typewriter]{-B} (or @elem[#:style typewriter]{--export-bundle})
+to the command line. Knotty writes all four files using the chosen filename
+stem and copies the supporting CSS/JS/font/icon assets alongside the HTML.
+
 
 @section[#:tag "stylesheets"]{Publishing to Webpages}
 

@@ -17,6 +17,7 @@ Knotty は格子状の配色デザインと、レース編みで多用される�
 - Knitspeak 形式のインポート／エクスポートや、画像からのフェアアイルパターン生成をサポートしています。
 - 実装は [Typed Racket](https://docs.racket-lang.org/ts-guide/) 上のモジュール群として構成されており、詳細は [マニュアル](https://t0mpr1c3.github.io/knotty/index.html) を参照できます。
 - コマンドライン実行可能ファイル ([リリースページ](https://github.com/t0mpr1c3/knotty/releases)) から各形式の変換が行えます。最新版では HTML / XML に加え、静的な PNG チャートも書き出せます。
+- `--export-bundle` フラグを使うと HTML / XML / テキスト指示 / PNG をまとめて生成できます。
 
 例: XML を読み込み、チャートを PNG として出力する
 
@@ -28,6 +29,17 @@ racket knotty-lib/cli.rkt \
 ```
 
 実行すると `lattice-chart.png` と、必要な CSS / JS アセットがカレントディレクトリにコピーされます。
+
+複数形式をまとめて書き出す場合は `--export-bundle` を利用します。
+
+```
+racket knotty-lib/cli.rkt \
+  --import-xml --export-bundle --force \
+  --output exports/lattice \
+  knotty-lib/resources/example/lattice
+```
+
+`exports/` 配下に `lattice.html / lattice.xml / lattice.txt / lattice.png` が生成され、HTML に必要なアセットも同じディレクトリに複製されます。
 
 ## Racket からの変換例
 
@@ -48,6 +60,13 @@ Racket スクリプトから直接変換処理を呼び出すこともできま�
 
 ;; PNG チャートを出力（横 2 × 縦 2 の繰り返し）
 (export-png pattern "lattice.png" #:h-repeats 2 #:v-repeats 2)
+
+;; 4 形式をまとめて出力（HTML / XML / テキスト / PNG）
+(export-pattern-bundle pattern "output"
+                       #:basename "lattice"
+                       #:overwrite? #t
+                       #:h-repeats 2
+                       #:v-repeats 2)
 ```
 
 ## はじめ方
