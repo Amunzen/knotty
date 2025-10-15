@@ -234,11 +234,17 @@
                                 [(false? base) "/"]
                                 [else base])]
                      [basename (path->string name)])
-                (export-pattern-bundle p dir
-                                       #:basename basename
-                                       #:overwrite? force?
-                                       #:h-repeats repeats-h
-                                       #:v-repeats repeats-v)
+                (define outputs
+                  (export-pattern-bundle p dir
+                                         #:basename basename
+                                         #:overwrite? force?
+                                         #:h-repeats repeats-h
+                                         #:v-repeats repeats-v))
+                (for ([entry (in-hash outputs)])
+                  (define-values (fmt path) entry)
+                  (ilog (format "    ~a -> ~a"
+                                fmt
+                                (path->string path))))
                 (overwrite-files
                  (build-path resources-path "css")
                  (build-path dir "css")
