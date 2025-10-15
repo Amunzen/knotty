@@ -52,7 +52,8 @@
 
   ;; Obtains the arguments from `command-line`
   ;; and runs the executable.
-  (define (cli-handler flags filestem)
+  (define (cli-handler flags . positional)
+    (define filestem-arg (if (null? positional) #f (car positional)))
     (let* (#|
            [input-suffix (path-get-extension input-filename)]
            [import-xml? (equal? #".xml" input-suffix)]
@@ -86,10 +87,25 @@
            [debug?           (equal? '((debug? #t))           ((sxpath "/debug?")           flags~))]
            [webserver?       (equal? '((webserver? #t))       ((sxpath "/webserver?")       flags~))]
            [output                                            ((sxpath "/output")           flags~)]
+           [input-option                                     ((sxpath "/input")            flags~)]
            [repeats                                           ((sxpath "/repeats")          flags~)]
+           [explicit-input (and (not (null? input-option)) (cadar input-option))]
+           [filestem-path
+            (let* ([raw (cond
+                         [(and filestem-arg (not (string=? filestem-arg "")))
+                          (string->path filestem-arg)]
+                         [explicit-input (string->path explicit-input)]
+                         [else
+                          (error 'knotty
+                                 "missing input path; provide --input or a positional filename")])]
+                   [ext (path-get-extension raw)])
+              (if (and ext (> (bytes-length ext) 0))
+                  (path-replace-extension raw "")
+                  raw))]
+           [filestem (path->string filestem-path)]
            [output-filestem (if (null? output)
-                                filestem
-                                (cadar output))])
+                                filestem-path
+                                (string->path (cadar output)))])
 
       ;; set logging level
       (define lvl (cond [quiet? 'none]
