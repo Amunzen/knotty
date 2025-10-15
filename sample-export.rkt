@@ -23,14 +23,22 @@ define html-path
 define xml-path
   (build-path output-dir "sample-pattern.xml")
 
+define instructions-path
+  (build-path output-dir "sample-pattern.txt")
+
 when (file-exists? html-path)
   (delete-file html-path)
 
 when (file-exists? xml-path)
   (delete-file xml-path)
 
+when (file-exists? instructions-path)
+  (delete-file instructions-path)
+
 export-html sample-pattern html-path
 export-xml sample-pattern xml-path
+export-instructions sample-pattern instructions-path
 
 printf "HTML written to ~a\n" (path->string html-path)
 printf "XML written to ~a\n" (path->string xml-path)
+printf "Instructions written to ~a\n" (path->string instructions-path)

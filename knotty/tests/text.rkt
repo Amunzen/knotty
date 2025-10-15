@@ -34,7 +34,8 @@
          "../../knotty-lib/rowmap.rkt"
          "../../knotty-lib/pattern.rkt")
 (require/typed "../../knotty-lib/text.rkt"
-               [pattern->text (Pattern -> String)])
+               [pattern->text (Pattern -> String)]
+               [pattern->instructions-text (Pattern -> String)])
 
 (module+ test
 
@@ -69,6 +70,15 @@
     "Rows 2 and 4: in CC1 k1; [ in MC p1, k1 ] 3 times; in CC1 k1.\n"
     "Row 5: in MC bo to end of row (last row!; 0 stitches).\n"))
 
+  (check-equal?
+   (pattern->instructions-text test-pattern)
+   (string-append
+    "Instructions:\n"
+    "Cast on 8 stitches.\n"
+    "Rows 1 and 3 (RS): in MC k1; [ in MC p1; in CC1 k1, p1 ] twice; in MC k1 (memo).\n"
+    "Rows 2 and 4: in CC1 k1; [ in MC p1, k1 ] 3 times; in CC1 k1.\n"
+    "Row 5: in MC bo to end of row (last row!; 0 stitches).\n"))
+
   ;; test `pattern->text`
   (check-equal?
    (pattern->text
@@ -87,6 +97,22 @@
     "Each round starts on the left hand side of the pattern.\n\n"
     "Yarn:\nMC - #FEEDEE pink jumbo \n\n"
     ;"Stitches:\nk : Knit\n\n"
+    "Instructions:\n"
+    "Cast on 10 stitches and join in the round.\n"
+    "Round 1 (WS): in MC k10.\n"
+    "Repeat round 1.\n"))
+
+  (check-equal?
+   (pattern->instructions-text
+    (pattern
+      #:technique 'hand
+      #:form 'circular
+      #:side 'left
+      #:face 'ws
+      #:repeat-rows 1
+      (yarn #xfeedee "pink" 7)
+      ((row 1) k10)))
+   (string-append
     "Instructions:\n"
     "Cast on 10 stitches and join in the round.\n"
     "Round 1 (WS): in MC k10.\n"
