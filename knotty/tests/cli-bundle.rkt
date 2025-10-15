@@ -47,16 +47,16 @@
 
        (define output-dir (bundle-output-dir output-filestem))
 
-       (check-true (file-exists? (path-replace-extension output-filestem #".html")))
-       (check-true (file-exists? (path-replace-extension output-filestem #".xml")))
-       (check-true (file-exists? (path-replace-extension output-filestem #".txt")))
-       (check-true (file-exists? (path-replace-extension output-filestem #".png")))
-
-       (check-true (file-exists? (build-path output-dir "css" "knotty.css")))
-       (check-true (file-exists? (build-path output-dir "css" "knotty-manual.css")))
-       (check-true (file-exists? (build-path output-dir "js" "knotty.js")))
-       (check-true (file-exists? (build-path output-dir "font" "StitchMasteryDash.ttf")))
-       (check-true (file-exists? (build-path output-dir "font" "georgia.ttf")))
-       (check-true (file-exists? (build-path output-dir "icon" "favicon.ico"))))))
+       (for ([path (list (path-replace-extension output-filestem #".html")
+                         (path-replace-extension output-filestem #".xml")
+                         (path-replace-extension output-filestem #".txt")
+                         (path-replace-extension output-filestem #".png")
+                         (build-path output-dir "css" "knotty.css")
+                         (build-path output-dir "css" "knotty-manual.css")
+                         (build-path output-dir "js" "knotty.js")
+                         (build-path output-dir "font" "StitchMasteryDash.ttf")
+                         (build-path output-dir "font" "georgia.ttf")
+                         (build-path output-dir "icon" "favicon.ico"))])
+         (check-true (file-exists? path))))))
 
 ;; end
