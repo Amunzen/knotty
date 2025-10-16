@@ -30,16 +30,17 @@ racket knotty-lib/cli.rkt \
 
 実行すると `lattice-chart.png` と、必要な CSS / JS アセットがカレントディレクトリにコピーされます。
 
-複数形式をまとめて書き出す場合は `--export-bundle` を利用します。
+複数形式をまとめて書き出す場合は `--export-bundle` を利用します。入力ファイルは `--input` で明示でき、末尾の位置引数は省略可能です。
 
 ```
 racket knotty-lib/cli.rkt \
-  --import-xml --export-bundle --force \
-  --output exports/lattice \
-  knotty-lib/resources/example/lattice
+  --import-xml \
+  --input knotty-lib/resources/example/lattice.xml \
+  --export-bundle --force \
+  --output exports/lattice
 ```
 
-`exports/` 配下に `lattice.html / lattice.xml / lattice.txt / lattice.png` が生成され、HTML に必要なアセットも同じディレクトリに複製されます。
+`exports/` 配下に `lattice.html / lattice.xml / lattice.txt / lattice.png` が生成され、HTML に必要なアセットも同じディレクトリに複製されます。加えて `exports/lattice.rkt` が自動生成され、同ディレクトリで `racket lattice.rkt` を実行すると同じバンドルを再出力できます。
 
 ## Racket からの変換例
 
@@ -62,11 +63,10 @@ Racket スクリプトから直接変換処理を呼び出すこともできま�
 (export-png pattern "lattice.png" #:h-repeats 2 #:v-repeats 2)
 
 ;; 4 形式をまとめて出力（HTML / XML / テキスト / PNG）
-(export-pattern-bundle pattern "output"
-                       #:basename "lattice"
-                       #:overwrite? #t
-                       #:h-repeats 2
-                       #:v-repeats 2)
+(keyword-apply export-pattern-bundle
+               '(#:basename #:h-repeats #:overwrite? #:v-repeats)
+               (list "lattice" 2 #t 2)
+               (list pattern "output"))
 ```
 
 ## はじめ方

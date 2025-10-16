@@ -172,7 +172,7 @@ repository.)
 @; NB whitespace indentation is required here
 @codeblock[#:keep-lang-line? #f]|{
 #lang scribble/text
-.\knotty.exe -xH ..\..\knotty\knotty-lib\resources\example\lattice
+.\knotty.exe -xH --input ..\..\knotty\knotty-lib\resources\example\lattice.xml
 }|
 
 (Note that you don't need to supply the file extension for
@@ -187,12 +187,17 @@ HTML file in a web browser to view the page.
 
 By default, the application saves output files with the same filename stem as
 the input file. The @elem[#:style typewriter]{-o} option allows other
-filenames to be exported.
+filenames to be exported. When the source file lives elsewhere, use
+@elem[#:style typewriter]{-i} to point at it explicitly (for example,
+@elem[#:style typewriter]{-x -i pattern.xml}).
 
 When you want HTML, XML, text instructions, and a PNG in one step, add
 @elem[#:style typewriter]{-B} (or @elem[#:style typewriter]{--export-bundle})
 to the command line. Knotty writes all four files using the chosen filename
-stem and copies the supporting CSS/JS/font/icon assets alongside the HTML.
+stem, copies the supporting CSS/JS/font/icon assets alongside the HTML, and
+produces a convenience script (for example, @elem[#:style typewriter]{lattice.rkt})
+in the same directory so you can rerun the bundle later with
+@elem[#:style typewriter]{racket lattice.rkt}.
 
 
 @section[#:tag "stylesheets"]{Publishing to Webpages}

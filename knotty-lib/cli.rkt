@@ -100,9 +100,8 @@
                                  "missing input path; provide --input or a positional filename")])]
                    [ext (path-get-extension raw)])
               (if (and ext (> (bytes-length ext) 0))
-                  (path-replace-extension raw "")
+                  (path-replace-extension raw #"")
                   raw))]
-           [filestem (path->string filestem-path)]
            [output-filestem (if (null? output)
                                 filestem-path
                                 (string->path (cadar output)))])
@@ -122,7 +121,6 @@
       (SAFE safe?)
 
       (ilog (format "Knotty version ~a run with options:" knotty-version))
-      (ilog (format "  filestem ~a" filestem))
       #|
       (when import-dak?
         (ilog "  --import-dak"))
@@ -189,7 +187,7 @@
                   (and import-stp? export-dak?))
           (let* ([in-suffix  (if import-stp? #".stp" #".dak")]
                  [out-suffix (if export-stp? #".stp" #".dak")]
-                 [in-file-path  (path-replace-extension filestem in-suffix)]
+                 [in-file-path  (path-replace-extension filestem-path in-suffix)]
                  [out-file-path (path-replace-extension output-filestem out-suffix)]
                  [in  (open-input-file  in-file-path)]
                  [out (open-output-file out-file-path)]
@@ -219,12 +217,17 @@
                            export-xml?
                            webserver?)))
           |#
-        (let* ([input-filename
-                (cond ;[import-dak? (path-replace-extension filestem #".dak")]
-                  [import-ks?  (path-replace-extension filestem #".ks")]
-                  [import-png? (path-replace-extension filestem #".png")]
-                  ;[import-stp? (path-replace-extension filestem #".stp")]
-                  [import-xml? (path-replace-extension filestem #".xml")]
+        (let* ([input-filename-helper
+                (lambda (ext)
+                  (if explicit-input
+                      (string->path explicit-input)
+                      (path-replace-extension filestem-path ext)))]
+               [input-filename
+                (cond ;[import-dak? (input-filename-helper #".dak")]
+                  [import-ks?  (input-filename-helper #".ks")]
+                  [import-png? (input-filename-helper #".png")]
+                  ;[import-stp? (input-filename-helper #".stp")]
+                  [import-xml? (input-filename-helper #".xml")]
                   [else (error invalid-input)])]
                [p
                 (cond ;[import-dak? (import-dak input-filename generic-matches? #f)]
@@ -239,8 +242,16 @@
                   [import-png? 'png]
                   [import-xml? 'xml]
                   [else #f])]
-               [repeats-h (if (null? repeats) 1 (cadar repeats))]
-               [repeats-v (if (null? repeats) 1 (caddar repeats))])
+                [import-kind
+                 (cond
+                   [import-ks? 'ks]
+                   [import-png? 'png]
+                   [import-xml? 'xml]
+                   [else #f])]
+                [repeats-h (if (null? repeats) 1 (cadar repeats))]
+                [repeats-v (if (null? repeats) 1 (caddar repeats))])
+          (ilog (format "  input ~a" (path->string input-filename)))
+          (ilog (format "  output-base ~a" (path->string output-filestem)))
           #|
             (when export-dak?
               (let ([out-file-path (path-replace-extension output-filestem #".dak")])
@@ -370,23 +381,24 @@
                  (build-path dest-dir-path f)
                  #:exists-ok? #t)))
 
-  (define (bundle-script-content import-kind import-path basename repeats-h repeats-v)
-    (define import-line
+  (define (bundle-script-content require-spec import-kind import-path basename repeats-h repeats-v)
+    (define import-form
       (case import-kind
-        [(xml) (format "  import-xml ~s" import-path)]
-        [(ks)  (format "  import-ks ~s" import-path)]
-        [(png) (format "  import-png ~s" import-path)]
-        [else "  (error \"pattern source unavailable\")"]))
+        [(xml) (format "(import-xml ~s)" import-path)]
+        [(ks)  (format "(import-ks ~s)" import-path)]
+        [(png) (format "(import-png ~s)" import-path)]
+        [else "(error \"pattern source unavailable\")"]))
     (string-append
-     "#lang sweet-exp typed/racket\n\n"
-     "require \"knotty-lib/main.rkt\"\n\n"
-     "define pattern\n"
-     import-line "\n\n"
-     (format "export-pattern-bundle pattern ~s\n" ".")
-     (format "                      #:basename ~s\n" basename)
-     "                      #:overwrite? #t\n"
-     (format "                      #:h-repeats ~a\n" repeats-h)
-     (format "                      #:v-repeats ~a\n" repeats-v)))
+     "#lang racket\n\n"
+     "(require racket/runtime-path\n"
+     (format "         (file ~s))\n\n" require-spec)
+     (format "(define-runtime-path source-path ~s)\n" import-path)
+     (format "(define-runtime-path bundle-dir ~s)\n\n" ".")
+     "(define pattern\n  (import-xml source-path))\n\n"
+     "(keyword-apply export-pattern-bundle\n"
+     "               '(#:basename #:h-repeats #:overwrite? #:v-repeats)\n"
+     (format "               (list ~s ~a #t ~a)\n" basename repeats-h repeats-v)
+     "               (list pattern bundle-dir))\n"))
 
   (define (write-bundle-source dir basename force? import-kind input-path repeats-h repeats-v)
     (when import-kind
@@ -397,8 +409,14 @@
         (if (path? rel-input)
             (path->string rel-input)
             (path->string input-abs)))
+      (define main-path (simplify-path (build-path resources-path ".." "main.rkt")))
+      (define rel-main (find-relative-path dir-abs main-path))
+      (define require-spec
+        (if (path? rel-main)
+            (path->string rel-main)
+            (path->string main-path)))
       (define script-content
-        (bundle-script-content import-kind import-path-str basename repeats-h repeats-v))
+        (bundle-script-content require-spec import-kind import-path-str basename repeats-h repeats-v))
       (define script-path (build-path dir (string-append basename ".rkt")))
       (replace-file-if-forced
        force?
@@ -517,11 +535,15 @@
     "Allow generic stitch matches when converting Designaknit .stp files"
     `(generic-matches? #t)]
    |#
-   [("-o" "--output")
+  [("-o" "--output")
     output-filestem
     "Specify filename stem of exported files"
     `(output ,output-filestem)]
-   [("-r" "--repeats")
+  [("-i" "--input")
+    input-path
+    "Specify input file (e.g., pattern.xml)"
+    `(input ,input-path)]
+  [("-r" "--repeats")
     hreps vreps ;; arguments for flag
     "Specify number of horizontal and vertical repeats in HTML output"
     `(repeats ,(string->positive-integer hreps)
@@ -535,6 +557,6 @@
 
    #:handlers
    cli-handler
-   '("filestem")))
+   '("input-or-stem")))
 
 ;; end
