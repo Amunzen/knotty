@@ -40,7 +40,7 @@ racket knotty-lib/cli.rkt \
   --output exports/lattice
 ```
 
-`exports/` 配下に `lattice.html / lattice.xml / lattice.txt / lattice.png` が生成され、HTML に必要なアセットも同じディレクトリに複製されます。加えて `exports/lattice.rkt` が自動生成され、同ディレクトリで `racket lattice.rkt` を実行すると同じバンドルを再出力できます。
+`exports/` 配下に `lattice.html / lattice.xml / lattice.txt / lattice.png / lattice.ks` が生成され、HTML に必要なアセットも同じディレクトリに複製されます。加えて `exports/lattice.rkt` が自動生成され、同ディレクトリで `racket lattice.rkt` を実行すると同じバンドルを再出力できます。
 
 ## Racket からの変換例
 

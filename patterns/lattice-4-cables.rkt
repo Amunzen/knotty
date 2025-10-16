@@ -14,10 +14,3 @@ define lattice-4-cables
     rows(4 6 12 14) repeat(p4 k4 p4 k4 p2) p2
     rows(5 13)      repeat(p4 lc-2/2 p4 lc-2/2 p2) p2
     rows(7 15)      repeat(p2 rpc-2/2 lpc-2/2 rpc-2/2 lpc-2/2) p2
-
-module+ main
-  define-runtime-path bundle-dir "../sample-output"
-  keyword-apply export-pattern-bundle
-                '(#:basename #:h-repeats #:overwrite? #:v-repeats)
-                (list "lattice-4-cables" 1 #t 1)
-                (list lattice-4-cables bundle-dir)

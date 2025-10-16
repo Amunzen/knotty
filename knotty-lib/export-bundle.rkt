@@ -22,6 +22,7 @@
 (require "pattern.rkt")
 (require "text.rkt")
 (require "png.rkt")
+(require "knitspeak.rkt")
 
 (define-type Paths-Hash
   (Immutable-HashTable Symbol Path))
@@ -48,10 +49,12 @@
   (define png-path (build-path dir (string-append base ".png")))
   (define xml-path (build-path dir (string-append base ".xml")))
   (define text-path (build-path dir (string-append base ".txt")))
+  (define ks-path (build-path dir (string-append base ".ks")))
   (ensure-writable html-path overwrite?)
   (ensure-writable png-path overwrite?)
   (ensure-writable xml-path overwrite?)
   (ensure-writable text-path overwrite?)
+  (ensure-writable ks-path overwrite?)
 
   (define instructions (pattern->instructions-text p))
   (define html-content (render-html p h v))
@@ -65,12 +68,16 @@
               #:v-repeats v
               #:cell-size cell-size
               #:margin margin)
+  (when (file-exists? ks-path)
+    (delete-file ks-path))
+  (export-ks p ks-path)
 
   (make-immutable-hasheq
    (list (cons 'html html-path)
          (cons 'png png-path)
          (cons 'xml xml-path)
-         (cons 'text text-path))))
+         (cons 'text text-path)
+         (cons 'ks ks-path))))
 
 (: normalise-output-directory (Path-String -> Path))
 (define (normalise-output-directory dir)
